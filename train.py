@@ -194,4 +194,4 @@ def test():
     print(f"Validation Results: Loss={val_loss:.4f}, Acc={val_acc:.4f}, AUC={val_auc:.4f}, F1={val_f1:.4f}")
 
 if __name__ == "__main__":
-    test()
+    main()
