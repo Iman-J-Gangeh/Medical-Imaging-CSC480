@@ -74,7 +74,6 @@ python mrnet.py
 After training, evaluate the model:
 
 ```python
-from mrnet import test
 test()
 ```
 
