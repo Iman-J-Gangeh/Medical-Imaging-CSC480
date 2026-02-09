@@ -16,9 +16,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 LEARNING_RATE = 1e-5
 EPOCHS = 1
 
-# ==========================================
-# 2. Custom Dataset Class
-# ==========================================
+
 class MRNetDataset(Dataset):
     def __init__(self, root_dir, task, plane, train=True, transform=None):
         self.root_dir = root_dir
