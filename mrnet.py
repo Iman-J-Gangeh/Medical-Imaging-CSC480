@@ -123,6 +123,8 @@ def run_epoch(model, loader, optimizer, criterion, is_train=True):
         
         total_loss += loss.item()
 
+        if i % 10 == 0: print(f"{'Train' if is_train else 'Valid'} Step {i}/{len(loader)} | Loss: {loss.item():.4f}")
+
     avg_loss = total_loss / len(loader)
     
     auc = roc_auc_score(all_labels, all_probs)
