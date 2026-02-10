@@ -161,12 +161,13 @@ def main():
 
     print("Starting Training...")
     for epoch in range(EPOCHS):
-        train_loss, train_acc = run_epoch(model, train_loader, optimizer, criterion, is_train=True)
-        print(f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.4f}")
-        
+        train_loss, train_acc, train_auc, train_f1 = run_epoch(model, train_loader, optimizer, criterion, is_train=True)
+        print(f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} | Acc: {train_acc:.4f} | AUC: {train_auc:.4f} | F1: {train_f1:.4f}")
+
         with torch.no_grad():
-            val_loss, val_acc = run_epoch(model, valid_loader, optimizer, criterion, is_train=False)
-            print(f"Epoch {epoch+1} | Valid Loss: {val_loss:.4f} | Valid Acc: {val_acc:.4f}")
+            val_loss, val_acc, val_auc, val_f1 = run_epoch(model, valid_loader, optimizer, criterion, is_train=False)
+            print(f"Epoch {epoch+1} | Valid Loss: {val_loss:.4f} | Acc: {val_acc:.4f} | AUC: {val_auc:.4f} | F1: {val_f1:.4f}")
+
             
     print("Training Complete.")
     
