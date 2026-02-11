@@ -10,7 +10,7 @@ from torchvision.models import ResNet18_Weights
 from sklearn.metrics import roc_auc_score, f1_score
 from typing import Tuple, List, Optional
 
-DATA_DIR = './' 
+DATA_DIR = './data' 
 TASK = 'abnormal'         # options: 'acl', 'meniscus', 'abnormal'
 PLANE = 'sagittal'   # options: 'axial', 'coronal', 'sagittal'
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -184,7 +184,7 @@ def main() -> None:
   model = MRNet().to(DEVICE)
   
   criterion = nn.BCEWithLogitsLoss() 
-  optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+  optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
   print("Starting Training...")
   train_loop(model, train_loader, valid_loader, optimizer, criterion)
