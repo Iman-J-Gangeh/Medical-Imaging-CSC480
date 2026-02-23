@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MRNet Image Classifier</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+      .wrap { max-width: 860px; margin: 0 auto; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+      .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; }
+      #dropzone {
+        border: 2px dashed #999;
+        border-radius: 12px;
+        padding: 26px;
+        text-align: center;
+        transition: 0.15s ease;
+        user-select: none;
+      }
+      #dropzone.dragover { border-color: #333; background: #fafafa; }
+      .muted { color: #666; font-size: 14px; }
+      img { max-width: 100%; border-radius: 12px; display: block; }
+      button { padding: 10px 12px; border-radius: 10px; border: 1px solid #ccc; background: white; cursor: pointer; }
+      button:disabled { opacity: 0.6; cursor: not-allowed; }
+      .kv { display: grid; grid-template-columns: 160px 1fr; gap: 8px; font-size: 14px; }
+      .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; border: 1px solid #ddd; font-size: 12px; }
+      .big { font-size: 18px; font-weight: 650; }
+      code { background: #f4f4f4; padding: 2px 6px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>MRNet Image Classifier </h1>
+      <p class="muted">
+        Drag & drop an image (PNG/JPG) to see classification. 
+      </p>
+
+      <div class="row">
+        <div class="card">
+          <div id="dropzone">
+            <div class="big">Drop an image here</div>
+            <div class="muted">or click to choose a file</div>
+            <input id="fileInput" type="file" accept="image/*" hidden />
+          </div>
+          <p class="muted" style="margin-top:10px;">
+            Model: <code id="modelPathLabel">models/mrnet_abnormal_sagittal.onnx</code>
+          </p>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+            <button id="loadBtn">Load Model</button>
+            <button id="runBtn" disabled>Classify Image</button>
+          </div>
+
+          <p class="muted" id="status" style="margin-top:10px;">Status: idle</p>
+        </div>
+
+        <div class="card">
+          <div class="pill" id="taskPill">task: abnormal</div>
+          <div class="pill" id="planePill">plane: sagittal</div>
+
+          <div style="margin-top:12px;">
+            <img id="preview" alt="preview" style="display:none;" />
+            <p class="muted" id="noPreview">No image loaded yet.</p>
+          </div>
+
+          <hr style="margin:16px 0; border:none; border-top:1px solid #eee;" />
+
+          <div class="kv">
+            <div>Prediction</div><div id="pred">—</div>
+            <div>Probability</div><div id="prob">—</div>
+            <div>Logits</div><div id="logits">—</div>
+          </div>
+
+          <p class="muted" style="margin-top:12px;">
+            Threshold uses <code>sigmoid(logits) &gt; 0.5</code>.
+          </p>
+        </div>
+      </div>
+
+      <p class="muted" style="margin-top:18px;">
+      </p>
+    </div>
+
+    <!-- ONNX Runtime Web -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
