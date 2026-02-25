@@ -82,7 +82,12 @@ class MRNet(nn.Module):
     self.model = models.resnet18(weights=ResNet18_Weights.DEFAULT)        
     self.feature_extractor = nn.Sequential(*list(self.model.children())[:-1])
     
-    self.classifier = nn.Linear(512, 1)
+    self.classifier = nn.Sequential(
+      nn.Linear(512, 128),
+      nn.ReLU(),
+      nn.Dropout(0.3),
+      nn.Linear(128, 1)
+    )
 
   def forward(self, x: torch.Tensor) -> torch.Tensor:
     # squeeze batch dim to get: (slices, 3, 256, 256)
