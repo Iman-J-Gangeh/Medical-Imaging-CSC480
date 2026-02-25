@@ -8,6 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import models, transforms
 from torchvision.models import ResNet18_Weights
 from sklearn.metrics import roc_auc_score, f1_score
+from imblearn.over_sampling import SMOTE
 from typing import Tuple, List, Optional
 
 DATA_DIR = './data' 
@@ -62,6 +63,18 @@ class MRNetDataset(Dataset):
     label = torch.tensor(float(label), dtype=torch.float32)
     return series, label
 
+class SmoteFeatureDataset(Dataset):
+  def __init__(self, features: np.ndarray, labels: np.ndarray) -> None:
+    self.features = torch.tensor(features, dtype=torch.float32)
+    self.labels   = torch.tensor(labels,   dtype=torch.float32)
+
+  def __len__(self) -> int:
+    return len(self.labels)
+
+  def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    return self.features[idx], self.labels[idx]
+
+
 class MRNet(nn.Module):
   def __init__(self) -> None:
     super(MRNet, self).__init__()
@@ -89,6 +102,35 @@ class MRNet(nn.Module):
     
     output = self.classifier(pooled_features)
     return output
+
+def extract_features(model: nn.Module, loader: DataLoader) -> Tuple[np.ndarray, np.ndarray]:
+  model.eval()
+  all_features = []
+  all_labels = []
+  with torch.no_grad():
+    for i, (data, label) in enumerate(loader):
+      x = data.squeeze(0).to(DEVICE)           # (slices, 3, H, W)
+      feats = model.feature_extractor(x)        # (slices, 512, 1, 1)
+      feats = feats.view(feats.size(0), -1)     # (slices, 512)
+      pooled = torch.max(feats, 0)[0]           # (512,)
+      all_features.append(pooled.cpu().numpy())
+      all_labels.append(label.item())
+      if i % 50 == 0:
+        print(f"  Extracting features: {i}/{len(loader)}")
+  return np.array(all_features), np.array(all_labels)
+
+
+def apply_smote(features: np.ndarray, labels: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+  unique, counts = np.unique(labels, return_counts=True)
+  print(f"Before SMOTE: {dict(zip(unique.astype(int), counts))}")
+
+  smote = SMOTE(random_state=42)
+  features_resampled, labels_resampled = smote.fit_resample(features, labels)
+
+  unique_r, counts_r = np.unique(labels_resampled, return_counts=True)
+  print(f"After  SMOTE: {dict(zip(unique_r.astype(int), counts_r))}")
+  return features_resampled, labels_resampled
+
 
 def calculate_metrics(labels: List[float], probs: List[float], preds: List[int], loss: float) -> Tuple[float, float, float, float]:
   try:
@@ -138,6 +180,69 @@ def run_epoch(model: nn.Module, loader: DataLoader, optimizer: Optional[optim.Op
   avg_loss = total_loss / len(loader)
   return calculate_metrics(all_labels, all_probs, all_preds, avg_loss)
 
+def run_feature_epoch(model: nn.Module, loader: DataLoader, optimizer: Optional[optim.Optimizer], criterion: nn.Module, is_train: bool = True) -> Tuple[float, float, float, float]:
+  if is_train:
+    model.train()
+  else:
+    model.eval()
+
+  total_loss = 0.0
+  all_labels = []
+  all_probs = []
+  all_preds = []
+
+  context = torch.enable_grad() if is_train else torch.no_grad()
+  with context:
+    for features, label in loader:
+      features, label = features.to(DEVICE), label.to(DEVICE)
+
+      if is_train and optimizer is not None:
+        optimizer.zero_grad()
+
+      output = model.classifier(features)     # (batch, 1)
+      loss = criterion(output.view(-1), label.view(-1))
+
+      if is_train and optimizer is not None:
+        loss.backward()
+        optimizer.step()
+
+      probs = torch.sigmoid(output).detach().cpu().numpy().flatten()
+      preds = (probs > 0.5).astype(int)
+      all_probs.extend(probs.tolist())
+      all_preds.extend(preds.tolist())
+      all_labels.extend(label.cpu().numpy().flatten().tolist())
+      total_loss += loss.item()
+
+  avg_loss = total_loss / len(loader)
+  return calculate_metrics(all_labels, all_probs, all_preds, avg_loss)
+
+
+def train_loop_smote(model: nn.Module, smote_loader: DataLoader, valid_loader: DataLoader, optimizer: optim.Optimizer, criterion: nn.Module) -> None:
+  best_val_auc = 0.0
+  patience_counter = 0
+
+  for epoch in range(EPOCHS):
+    train_loss, train_acc, train_auc, train_f1 = run_feature_epoch(model, smote_loader, optimizer, criterion, is_train=True)
+    print(f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} | Acc: {train_acc:.4f} | AUC: {train_auc:.4f} | F1: {train_f1:.4f}")
+
+    with torch.no_grad():
+      val_loss, val_acc, val_auc, val_f1 = run_epoch(model, valid_loader, None, criterion, is_train=False)
+    print(f"Epoch {epoch+1} | Valid Loss: {val_loss:.4f} | Acc: {val_acc:.4f} | AUC: {val_auc:.4f} | F1: {val_f1:.4f}")
+
+    if val_auc > best_val_auc:
+      best_val_auc = val_auc
+      patience_counter = 0
+      torch.save(model.state_dict(), f'mrnet_{TASK}_{PLANE}.pth')
+      print(f"Saved Best Model (AUC: {best_val_auc:.4f})")
+    else:
+      patience_counter += 1
+      print(f"No improvement. Patience: {patience_counter}/{PATIENCE}")
+
+    if patience_counter >= PATIENCE:
+      print("Early stopping triggered.")
+      break
+
+
 def train_loop(model: nn.Module, train_loader: DataLoader, valid_loader: DataLoader, optimizer: optim.Optimizer, criterion: nn.Module) -> None:
   best_val_auc = 0.0
   patience_counter = 0
@@ -177,17 +282,32 @@ def main() -> None:
   valid_dataset = MRNetDataset(DATA_DIR, TASK, PLANE, train=False, transform=transform)
 
   # batch size 1 because slice depth varies between patients
-  train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=0)
+  train_loader = DataLoader(train_dataset, batch_size=1, shuffle=False, num_workers=0)
   valid_loader = DataLoader(valid_dataset, batch_size=1, shuffle=False, num_workers=0)
 
   print("Initializing Model...")
   model = MRNet().to(DEVICE)
-  
-  criterion = nn.BCEWithLogitsLoss() 
-  optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
-  print("Starting Training...")
-  train_loop(model, train_loader, valid_loader, optimizer, criterion)
+  criterion = nn.BCEWithLogitsLoss()
+
+  # --- Phase 1: Extract 512-d features from all training exams ---
+  print("\nPhase 1: Extracting features from training set (frozen backbone)...")
+  train_features, train_labels = extract_features(model, train_loader)
+  print(f"  Extracted {train_features.shape[0]} feature vectors of dim {train_features.shape[1]}")
+
+  # --- Phase 2: Apply SMOTE to balance normal vs abnormal ---
+  print("\nPhase 2: Applying SMOTE...")
+  features_resampled, labels_resampled = apply_smote(train_features, train_labels)
+
+  smote_dataset = SmoteFeatureDataset(features_resampled, labels_resampled)
+  smote_loader  = DataLoader(smote_dataset, batch_size=32, shuffle=True, num_workers=0)
+
+  # Only the classifier head is trained on SMOTE features; backbone stays frozen
+  optimizer = optim.AdamW(model.classifier.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+
+  # --- Phase 3: Train classifier on SMOTE-balanced features ---
+  print("\nPhase 3: Training classifier on SMOTE-balanced features...")
+  train_loop_smote(model, smote_loader, valid_loader, optimizer, criterion)
   print("Training Complete.")
 
 def test() -> None:
