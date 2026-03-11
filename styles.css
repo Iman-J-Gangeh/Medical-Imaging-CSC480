@@ -1,0 +1,273 @@
+/* ==========================================
+   MRNet UI — “Modern Lifestyle” editorial look
+   (works with your existing HTML structure)
+   ========================================== */
+
+:root{
+  /* Warm paper + ink */
+  --page: #f6f2e8;           /* cream */
+  --paper: #fbf8f0;          /* lighter cream */
+  --ink: #1f2326;            /* near-black */
+  --muted: #6d6a62;          /* warm gray */
+
+  /* Subtle lines/shadows */
+  --line: rgba(31,35,38,0.16);
+  --line2: rgba(31,35,38,0.10);
+  --shadow: 0 16px 40px rgba(31,35,38,0.10);
+
+  /* Accent (sage/olive like the example button) */
+  --accent: #9aa07b;
+  --accent-dark: #7f8665;
+
+  --radius: 18px;
+}
+
+*{ box-sizing: border-box; }
+html, body{ height: 100%; }
+
+body{
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+/* Centered “hero card” feel */
+.wrap{
+  max-width: 980px;
+  margin: 34px auto;
+  padding: 0 18px;
+}
+
+/* Big editorial title */
+h1{
+  font-family: ui-serif, Georgia, "Times New Roman", Times, serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-size: 52px;
+  line-height: 1.02;
+  margin: 0 0 10px;
+}
+
+/* Warm muted copy */
+.muted{
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Two-column hero layout */
+.row{
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 0;
+  margin-top: 18px;
+
+  /* Make the two cards look like one unified hero block */
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line2);
+  background: var(--paper);
+}
+
+@media (max-width: 900px){
+  .row{
+    grid-template-columns: 1fr;
+  }
+  h1{ font-size: 40px; }
+}
+
+/* Cards become “left copy” and “right image” panels */
+.card{
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 28px 28px;
+}
+
+/* Left panel styling (copy + controls) */
+.card:first-child{
+  background: var(--paper);
+  position: relative;
+}
+
+/* Add the subtle horizontal line like the example */
+.card:first-child::after{
+  content: "";
+  display: block;
+  height: 1px;
+  background: var(--line2);
+  margin-top: 18px;
+}
+
+/* Right panel feels like an image area */
+.card:nth-child(2){
+  background: #f2eee4;
+  border-left: 1px solid var(--line2);
+}
+
+@media (max-width: 900px){
+  .card:nth-child(2){
+    border-left: none;
+    border-top: 1px solid var(--line2);
+  }
+}
+
+/* Dropzone: minimal, clean */
+#dropzone{
+  border: 1px solid var(--line2);
+  border-radius: 14px;
+  padding: 18px 16px;
+  text-align: left;
+  background: rgba(255,255,255,0.40);
+  transition: 0.15s ease;
+}
+
+#dropzone .big{
+  font-family: ui-serif, Georgia, "Times New Roman", Times, serif;
+  font-size: 22px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+
+#dropzone:hover{
+  border-color: var(--line);
+  background: rgba(255,255,255,0.55);
+}
+
+#dropzone.dragover{
+  border-color: rgba(154,160,123,0.9);
+  background: rgba(154,160,123,0.10);
+}
+
+/* Buttons: pill, sage */
+button{
+  appearance: none;
+  border: 1px solid rgba(154,160,123,0.55);
+  background: rgba(154,160,123,0.20);
+  color: #2a2e2a;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: 0.15s ease;
+}
+
+button:hover{
+  background: rgba(154,160,123,0.28);
+  border-color: rgba(154,160,123,0.75);
+  transform: translateY(-1px);
+}
+
+button:active{
+  transform: translateY(0px);
+}
+
+button:disabled{
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Make “Classify Image” the primary button */
+#runBtn:not(:disabled){
+  background: var(--accent);
+  border-color: rgba(127,134,101,0.70);
+  color: #ffffff;
+}
+
+#runBtn:not(:disabled):hover{
+  background: var(--accent-dark);
+  border-color: rgba(127,134,101,0.90);
+}
+
+/* Status line: simple */
+#status{
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line2);
+  background: rgba(255,255,255,0.45);
+  color: var(--muted);
+}
+
+/* Pills: understated */
+.pill{
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line2);
+  background: rgba(255,255,255,0.45);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-right: 8px;
+}
+
+#taskPill{
+  border-color: rgba(154,160,123,0.55);
+}
+#planePill{
+  border-color: rgba(154,160,123,0.35);
+}
+
+/* Preview image becomes the “hero photo” */
+#preview{
+  width: 100%;
+  height: 360px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid var(--line2);
+  background: rgba(255,255,255,0.60);
+}
+
+@media (max-width: 900px){
+  #preview{ height: 260px; }
+}
+
+/* If no image, show a nice placeholder */
+#noPreview{
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line2);
+  background: rgba(255,255,255,0.45);
+  color: var(--muted);
+}
+
+/* Divider + key/value area */
+hr{
+  margin: 18px 0;
+  border: none;
+  border-top: 1px solid var(--line2);
+}
+
+.kv{
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 10px 12px;
+  font-size: 14px;
+}
+
+.kv > div:nth-child(odd){
+  color: var(--muted);
+}
+
+#pred, #prob, #logits{
+  font-weight: 650;
+  color: var(--ink);
+}
+
+/* Code tags */
+code{
+  background: rgba(255,255,255,0.55);
+  border: 1px solid var(--line2);
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--muted);
+}

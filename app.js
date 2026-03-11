@@ -1,13 +1,12 @@
 // ---- Config ----
-// Put your exported ONNX here:
-const MODEL_URL = "models/mrnet_abnormal_sagittal.onnx";
+// Use the packed single-file model (no .onnx.data needed):
+const MODEL_URL = "models/mrnet_abnormal_sagittal_packed.onnx";
 
-// Class labels for a binary classifier.
-// You can change these to match TASK='acl' or 'meniscus' or 'abnormal'.
+// Labels
 const NEG_LABEL = "negative (0)";
 const POS_LABEL = "positive (1)";
 
-// ImageNet normalization (must match your training transform)
+// ImageNet normalization
 const IMAGENET_MEAN = [0.485, 0.456, 0.406];
 const IMAGENET_STD  = [0.229, 0.224, 0.225];
 
@@ -66,14 +65,32 @@ function imageToTensor(img) {
 async function loadModel() {
   setStatus("loading model...");
   el("loadBtn").disabled = true;
+
   try {
-    // Some models run faster with wasm; ORT auto-selects.
-    session = await ort.InferenceSession.create(MODEL_URL);
+    // Use CDN wasm binaries explicitly
+    ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
+    ort.env.wasm.numThreads = 1;
+
+    // OPTIONAL: force wasm execution provider (avoids unexpected fallback behavior)
+    session = await ort.InferenceSession.create(MODEL_URL, {
+      executionProviders: ["wasm"],
+    });
+
+    console.log("ORT inputs:", session.inputNames);
+    console.log("ORT outputs:", session.outputNames);
+
     setStatus("model loaded ✅");
     el("runBtn").disabled = !loadedImage;
   } catch (err) {
     console.error(err);
-    setStatus(`model load failed: ${err.message || err}`);
+
+    // Give you the most useful error message possible
+    const msg =
+      (err && err.message) ? err.message :
+      (typeof err === "string") ? err :
+      JSON.stringify(err);
+
+    setStatus(`model load failed: ${msg}`);
     el("loadBtn").disabled = false;
   }
 }
